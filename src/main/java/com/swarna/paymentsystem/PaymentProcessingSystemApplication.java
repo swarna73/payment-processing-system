@@ -8,6 +8,7 @@ public class PaymentProcessingSystemApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(PaymentProcessingSystemApplication.class, args);
+		
 	}
 
 }
