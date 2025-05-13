@@ -1,7 +1,9 @@
 // src/main/java/com/swarna/paymentsystem/controller/UserController.java
 package com.swarna.paymentsystem.controller;
 
+import java.util.List;
 import java.util.Map;
+import com.swarna.paymentsystem.model.AuditLog;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,8 +16,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
+import com.swarna.paymentsystem.model.AuditLog;
 import com.swarna.paymentsystem.model.User;
+import com.swarna.paymentsystem.repository.AuditLogRepository;
 import com.swarna.paymentsystem.repository.UserRepository;
 
 @RestController
@@ -23,11 +26,12 @@ import com.swarna.paymentsystem.repository.UserRepository;
 public class UserController {
 
     private final UserRepository userRepository;
-    
+    private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
-    public UserController(UserRepository userRepository,PasswordEncoder passwordEncoder ) {
+    public UserController(UserRepository userRepository,PasswordEncoder passwordEncoder, AuditLogRepository auditLogRepository ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.auditLogRepository = auditLogRepository;
     }
     @GetMapping("/me")
     public UserDetails getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
@@ -51,7 +55,7 @@ public class UserController {
         // 2️⃣ Update the email
         user.setEmail(newEmail);
         userRepository.save(user);
-
+        auditLogRepository.save(new AuditLog(user.getEmail(), "Updated email"));
         return ResponseEntity.noContent().build();  // ✅ This avoids frontend error
     }
     
@@ -74,7 +78,14 @@ public class UserController {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-
+        auditLogRepository.save(new AuditLog(user.getEmail(), "Changed password"));
         return ResponseEntity.ok("Password changed successfully");
+    }
+    
+    
+    @GetMapping("/audit-logs")
+    public ResponseEntity<?> getAuditLogs(@AuthenticationPrincipal UserDetails userDetails) {
+        List<AuditLog> logs = auditLogRepository.findByUserEmailOrderByTimestampDesc(userDetails.getUsername());
+        return ResponseEntity.ok(logs);
     }
 }
