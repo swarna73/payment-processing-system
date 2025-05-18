@@ -83,8 +83,12 @@ public class UserController {
     }
     
     
-    @GetMapping("/audit-logs")
+    @GetMapping("/api/audit-logs")
     public ResponseEntity<?> getAuditLogs(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+
         List<AuditLog> logs = auditLogRepository.findByUserEmailOrderByTimestampDesc(userDetails.getUsername());
         return ResponseEntity.ok(logs);
     }
