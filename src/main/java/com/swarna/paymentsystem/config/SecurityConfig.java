@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/audit-logs", "/audit-logs").authenticated()
                 .requestMatchers(HttpMethod.GET, "/ping").permitAll()
+                .requestMatchers("/api/payments/**").authenticated()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
             )
