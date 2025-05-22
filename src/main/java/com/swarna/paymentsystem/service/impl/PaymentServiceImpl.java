@@ -54,6 +54,8 @@ public class PaymentServiceImpl implements PaymentService {
             // 3) store the Stripe intent ID so we can capture later
             p.setStatus("AUTHORIZED");
             p.setStripeIntentId(intent.getId());
+            p.setStripeClientSecret(intent.getClientSecret());
+
             repo.save(p);
 
         } catch (StripeException e) {

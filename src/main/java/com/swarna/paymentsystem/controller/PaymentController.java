@@ -10,7 +10,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -24,13 +26,19 @@ public class PaymentController {
     }
 
     @PostMapping
-    public ResponseEntity<Payment> createPayment(
+    public ResponseEntity<Map<String,String>> createPayment(
             @RequestBody CreatePaymentDto dto,
             @AuthenticationPrincipal UserDetails user
     ) {
-        Payment p = payments.createPayment(dto.getAmount(), dto.getCurrency(), user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(p);
-    }
+    	  Payment p = payments.createPayment(dto.getAmount(), dto.getCurrency(), user);
+
+    	    Map<String,String> resp = new HashMap<>();
+    	    resp.put("paymentId",    p.getId().toString());
+    	    resp.put("clientSecret", p.getStripeClientSecret());
+    	    resp.put("status",       p.getStatus());
+    	    return ResponseEntity.status(HttpStatus.CREATED).body(resp);
+    	  }
+
 
     @PostMapping("/{id}/capture")
     public ResponseEntity<Payment> capture(

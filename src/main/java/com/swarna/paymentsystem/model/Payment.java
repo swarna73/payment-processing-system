@@ -62,7 +62,12 @@ public class Payment {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     
     public String getStripeIntentId() { return stripeIntentId; }
+    private String stripeClientSecret;
+
     
     public void setStripeIntentId(String stripeIntentId) { this.stripeIntentId = stripeIntentId; }
+    public String getStripeClientSecret() { return stripeClientSecret; }
+    public void setStripeClientSecret(String s) { this.stripeClientSecret = s; }
+
 
 }
