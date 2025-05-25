@@ -1,6 +1,9 @@
 package com.swarna.paymentsystem.service.impl;
 
+import com.swarna.paymentsystem.config.StripeConfig;
+import com.swarna.paymentsystem.model.AuditLog;
 import com.swarna.paymentsystem.model.Payment;
+import com.swarna.paymentsystem.repository.AuditLogRepository;
 import com.swarna.paymentsystem.repository.PaymentRepository;
 import com.swarna.paymentsystem.service.PaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,9 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentServiceImpl(PaymentRepository repo) {
         this.repo = repo;
     }
+    
+    @Autowired private AuditLogRepository     auditLogs;
+    @Autowired private StripeConfig           stripeConfig;
 
     @Override
     public Payment createPayment(BigDecimal amount, String currency, UserDetails user) {
@@ -65,6 +71,12 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Stripe authorization failed", e);
         }
 
+        // 3) Log it
+        auditLogs.save(new AuditLog(
+          user.getUsername(),
+          "Created payment No." + p.getId() + " for " + amount + " " + currency
+        ));
+        
         return p;
     }
 
@@ -88,6 +100,11 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (StripeException e) {
             throw new RuntimeException("Stripe capture failed", e);
         }
+        
+        auditLogs.save(new AuditLog(
+        	      user.getUsername(),
+        	      "Captured payment " + p.getId()
+        	    ));
 
         return p;
     }
@@ -113,6 +130,10 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Stripe refund failed", e);
         }
 
+        auditLogs.save(new AuditLog(
+        	      user.getUsername(),
+        	      "Refunded payment " + p.getId()
+        	    ));
         return p;
     }
 
