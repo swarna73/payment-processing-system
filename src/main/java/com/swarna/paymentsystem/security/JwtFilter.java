@@ -12,6 +12,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+
 import java.io.IOException;
 
 @Component
@@ -24,40 +27,50 @@ public class JwtFilter extends OncePerRequestFilter {
     private CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+                                    throws ServletException, IOException {
         String path = request.getRequestURI();
-        System.out.println("🔍 Incoming request: " + path);
-
-        // Skip token parsing for public auth endpoints
+        // Skip auth for login/register
         if (path.startsWith("/api/auth")) {
             filterChain.doFilter(request, response);
-            
             return;
         }
 
         String header = request.getHeader("Authorization");
-        System.out.println("✅ JwtFilter executed. Token: " + header);
-
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            String email = jwtUtil.getUsernameFromToken(token);
-            System.out.println("📧 Extracted email from token: " + email);
-
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                if (jwtUtil.validateToken(token)) {
-                    System.out.println("✅ Token is valid. Setting SecurityContext.");
-
-                    UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+            try {
+                // Attempt to parse & validate
+                String email = jwtUtil.getUsernameFromToken(token);
+                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                    if (jwtUtil.validateToken(token)) {
+                        UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                              userDetails, null, userDetails.getAuthorities()
+                            );
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
                 }
+
+            } catch (ExpiredJwtException eje) {
+                // Token expired → 401 Unauthorized
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\":\"token_expired\"}");
+                return;
+            } catch (JwtException | IllegalArgumentException e) {
+                // Any other parsing/validation error → 401
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\":\"invalid_token\"}");
+                return;
             }
         }
 
+        // Either no header or valid auth; continue
         filterChain.doFilter(request, response);
     }
 }
